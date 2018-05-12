@@ -1,7 +1,7 @@
 <template>
   <rect
-    :x="x"
-    :y="y"
+    :x="x + correctX"
+    :y="y + correctY"
     :width="width"
     :height="height"
     stroke="#000"
@@ -71,13 +71,13 @@ const pointsToSize = points => ({
   height: points[1][2] - points[1][0],
 })
 
-const getPoints = rect => {
-  const xMin = rect.x
-  const xMid = rect.x + rect.width / 2
-  const xMax = rect.x + rect.width
-  const yMin = rect.y
-  const yMid = rect.y + rect.height / 2
-  const yMax = rect.y + rect.height
+const getPoints = (rect, correctX = 0, correctY = 0) => {
+  const xMin = rect.x + correctX
+  const xMid = rect.x + rect.width / 2 + correctX
+  const xMax = rect.x + rect.width + correctX
+  const yMin = rect.y + correctY
+  const yMid = rect.y + rect.height / 2 + correctY
+  const yMax = rect.y + rect.height + correctY
 
   return [
     [xMin, xMid, xMax],
@@ -93,15 +93,15 @@ const getPoints = rect => {
  */
 export default {
   name: 'rectangle',
-  props: ['id', 'points', 'getViewportRef'],
+  props: ['id', 'points', 'getViewportRef', 'correctX', 'correctY'],
   data() {
     return pointsToSize(this.points)
   },
-  // watch: {
-  //   points(val) {
-  //     Object.assign(this, pointsToSize(val))
-  //   }
-  // },
+  watch: {
+    points(val) {
+      Object.assign(this, pointsToSize(val))
+    }
+  },
   methods: {
     dragElement(e) {
       let draged = false
@@ -125,9 +125,10 @@ export default {
       }
 
       const mousemoveHandler = Utils.throttle(dragMoveHandler, THROTTLE_DELAY_TIME, true)
+      // const mousemoveHandler = dragMoveHandler
 
       const mouseupHandler = ev => {
-        draged && this.$emit('update:points', getPoints(this))
+        draged && this.$emit('update:points', getPoints(this, this.correctX, this.correctY))
         window.removeEventListener('mousemove', mousemoveHandler)
         window.removeEventListener('mouseup', mouseupHandler)
       }

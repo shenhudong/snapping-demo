@@ -7,6 +7,8 @@
       :id="props.id"
       :points.sync="props.points"
       :getViewportRef="getViewportRef"
+      :correctX="dragingShape === props.id ? correctX : 0"
+      :correctY="dragingShape === props.id ? correctY : 0"
       @draging="handleDragingShape"
       @update:points="handleDragEnd"
     />
@@ -33,7 +35,7 @@
 import common from '../common'
 import rectangle from './rectangle'
 
-const DISTANCE_THRESHOLD = 5
+const DISTANCE_THRESHOLD = 8
 
 const RectList = [{
   x: 124,
@@ -51,10 +53,10 @@ const RectList = [{
   width: 130,
   height: 200
 }, {
-  x: 288,
-  y: 722,
-  width: 132,
-  height: 203
+  x: 208,
+  y: 402,
+  width: 231,
+  height: 503
 }]
 
 const getPoints = rect => {
@@ -91,27 +93,33 @@ export default {
       measuringLine: [
         [[0, 0], [0, 0]],
         [[0, 0], [0, 0]]
-      ]
+      ],
+      dragingShape: null,
+      correctX: 0,
+      correctY: 0
     }
   },
   methods: {
     getViewportRef() {
       return this.$refs.svg
     },
+
     handleDragingShape(shapeId, points) {
       const measuringLineX = [[0, 0], [0, 0]]
       const measuringLineY = [[0, 0], [0, 0]]
 
-      const closestX = {
+      let closestX = {
         points: null,
         distance: Infinity,
-        pointIndex: []
+        pointIndex: [],
+        correct: 0
       }
 
-      const closestY = {
+      let closestY = {
         points: null,
         distance: Infinity,
-        pointIndex: []
+        pointIndex: [],
+        correct: 0
       }
 
       this.shapeList.forEach(shape => {
@@ -120,42 +128,48 @@ export default {
         }
 
         const pointXDiff = [
-          [Math.abs(shape.points[0][0] - points[0][0]), 0],
-          [Math.abs(shape.points[0][0] - points[0][1]), 0],
-          [Math.abs(shape.points[0][0] - points[0][2]), 0],
-          [Math.abs(shape.points[0][1] - points[0][0]), 1],
-          [Math.abs(shape.points[0][1] - points[0][1]), 1],
-          [Math.abs(shape.points[0][1] - points[0][2]), 1],
-          [Math.abs(shape.points[0][2] - points[0][0]), 2],
-          [Math.abs(shape.points[0][2] - points[0][1]), 2],
-          [Math.abs(shape.points[0][2] - points[0][2]), 2]
+          [shape.points[0][0] - points[0][0], 0],
+          [shape.points[0][0] - points[0][1], 0],
+          [shape.points[0][0] - points[0][2], 0],
+          [shape.points[0][1] - points[0][0], 1],
+          [shape.points[0][1] - points[0][1], 1],
+          [shape.points[0][1] - points[0][2], 1],
+          [shape.points[0][2] - points[0][0], 2],
+          [shape.points[0][2] - points[0][1], 2],
+          [shape.points[0][2] - points[0][2], 2]
         ]
 
         const pointYDiff = [
-          [Math.abs(shape.points[1][0] - points[1][0]), 0],
-          [Math.abs(shape.points[1][0] - points[1][1]), 0],
-          [Math.abs(shape.points[1][0] - points[1][2]), 0],
-          [Math.abs(shape.points[1][1] - points[1][0]), 1],
-          [Math.abs(shape.points[1][1] - points[1][1]), 1],
-          [Math.abs(shape.points[1][1] - points[1][2]), 1],
-          [Math.abs(shape.points[1][2] - points[1][0]), 2],
-          [Math.abs(shape.points[1][2] - points[1][1]), 2],
-          [Math.abs(shape.points[1][2] - points[1][2]), 2]
+          [shape.points[1][0] - points[1][0], 0],
+          [shape.points[1][0] - points[1][1], 0],
+          [shape.points[1][0] - points[1][2], 0],
+          [shape.points[1][1] - points[1][0], 1],
+          [shape.points[1][1] - points[1][1], 1],
+          [shape.points[1][1] - points[1][2], 1],
+          [shape.points[1][2] - points[1][0], 2],
+          [shape.points[1][2] - points[1][1], 2],
+          [shape.points[1][2] - points[1][2], 2]
         ]
 
         pointXDiff.forEach(diff => {
-          if (diff[0] < closestX.distance) {
-            closestX.distance = diff[0]
-            closestX.pointIndex = diff[1]
-            closestX.points = shape.points
+          if (Math.abs(diff[0]) < closestX.distance) {
+            closestX = {
+              distance: Math.abs(diff[0]),
+              pointIndex: diff[1],
+              points: shape.points,
+              correct: diff[0]
+            }
           }
         })
 
         pointYDiff.forEach(diff => {
-          if (diff[0] < closestY.distance) {
-            closestY.distance = diff[0]
-            closestY.pointIndex = diff[1]
-            closestY.points = shape.points
+          if (Math.abs(diff[0]) < closestY.distance) {
+            closestY = {
+              distance: Math.abs(diff[0]),
+              pointIndex: diff[1],
+              points: shape.points,
+              correct: diff[0]
+            }
           }
         })
       })
@@ -179,6 +193,8 @@ export default {
           measuringLineX[0][1] = closestX.points[1][0]
           measuringLineX[1][1] = points[1][2]
         }
+      } else {
+        closestX.correct = 0
       }
 
       if (closestY.distance < DISTANCE_THRESHOLD) {
@@ -200,14 +216,25 @@ export default {
           measuringLineY[0][0] = closestY.points[0][0]
           measuringLineY[1][0] = points[0][2]
         }
+      } else {
+        closestY.correct = 0
       }
 
       this.measuringLine = [
         measuringLineX,
         measuringLineY
       ]
+
+      this.dragingShape = shapeId
+      this.correctX = closestX.correct
+      this.correctY = closestY.correct
     },
+
     handleDragEnd() {
+      this.dragingShape = null
+      this.correctX = 0
+      this.correctY = 0
+
       this.measuringLine = [
         [[0, 0], [0, 0]],
         [[0, 0], [0, 0]]
