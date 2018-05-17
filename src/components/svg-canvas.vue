@@ -34,7 +34,8 @@
 </template>
 
 <script>
-import common from '../common'
+import Common from '@/common'
+import Utils from '@/utils'
 import rectangle from './rectangle'
 
 // 吸附阈值
@@ -47,20 +48,6 @@ const RectList = [
   {x: 208, y: 402, width: 231, height: 503}
 ]
 
-const getPoints = rect => {
-  const xMin = rect.x
-  const xMid = rect.x + rect.width / 2
-  const xMax = rect.x + rect.width
-  const yMin = rect.y
-  const yMid = rect.y + rect.height / 2
-  const yMax = rect.y + rect.height
-
-  return [
-    [xMin, xMid, xMax],
-    [yMin, yMid, yMax]
-  ]
-}
-
 export default {
   components: {
     rectangle
@@ -71,7 +58,7 @@ export default {
     const shapeList = RectList.map((rect, i) => {
       return {
         id: ID_TEMPLATE + i,
-        points: getPoints(rect),
+        points: Common.sizeToPoints(rect),
         ...rect
       }
     })

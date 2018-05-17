@@ -1,3 +1,24 @@
+const sizeToPoints = (rect, correctX = 0, correctY = 0) => {
+  const xMin = rect.x + correctX
+  const xMid = rect.x + rect.width / 2 + correctX
+  const xMax = rect.x + rect.width + correctX
+  const yMin = rect.y + correctY
+  const yMid = rect.y + rect.height / 2 + correctY
+  const yMax = rect.y + rect.height + correctY
+
+  return [
+    [xMin, xMid, xMax],
+    [yMin, yMid, yMax]
+  ]
+}
+
+const pointsToSize = points => ({
+  x: points[0][0],
+  y: points[1][0],
+  width: points[0][2] - points[0][0],
+  height: points[1][2] - points[1][0],
+})
+
 /**
  * 获取鼠标位置在svg元素中的坐标
  * @param   {SVGElement}  SVGElement  SVG元素
@@ -51,6 +72,8 @@ const getRotatedPoint = (point, center, rotate) => {
 const absoluteZoom = (num, scaling) => (num / scaling * 100).toFixed(2)
 
 export default {
+  sizeToPoints,
+  pointsToSize,
   getPositionInSvg,
   degreeToRadian,
   getRotatedPoint,
