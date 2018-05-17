@@ -125,7 +125,6 @@ export default {
       }
 
       const mousemoveHandler = Utils.throttle(dragMoveHandler, THROTTLE_DELAY_TIME, true)
-      // const mousemoveHandler = dragMoveHandler
 
       const mouseupHandler = ev => {
         draged && this.$emit('update:points', getPoints(this, this.correctX, this.correctY))
