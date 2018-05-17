@@ -1,5 +1,5 @@
 <template>
-  <svg viewBox="0 0 1000 1000" width="500" height="500" ref="svg">
+  <svg viewBox="0 0 1000 1000" width="800" height="800" ref="svg">
     <rect width="100%" height="100%" fill="none" stroke="#000" x="0" y="0" />
     <rectangle
       v-for="(props, i) in shapeList"
