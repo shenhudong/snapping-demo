@@ -1,22 +1,3 @@
-<template>
-  <g>
-    <svg
-      :viewBox="`0 0 ${width} ${height}`"
-    ></svg>
-    <rect
-      :width="width"
-      :height="height"
-      :x="x + correctX"
-      :y="y + correctY"
-      fill="transparent"
-      stroke="#000"
-      stroke-width="1"
-      @mousedown="dragElement"
-    />
-  </g>
-</template>
-
-<script>
 import Common from '@/common'
 import Utils from '@/utils'
 
@@ -36,12 +17,6 @@ const sizeToPoints = (rect, correctX = 0, correctY = 0) => {
   ]
 }
 
-/**
- * Points [
- *   [xMin, xMid, xMax],
- *   [yMin, yMid, yMax]
- * ]
- */
 export default {
   name: 'rectangle',
   props: ['id', 'points', 'getViewportRef', 'correctX', 'correctY'],
@@ -52,6 +27,24 @@ export default {
     points(val) {
       Object.assign(this, Common.pointsToSize(val))
     }
+  },
+  render(h) {
+    const viewBox = `0 0 ${width} ${height}`
+    return (
+      <g>
+        <svg viewBox={viewBox}></svg>
+        <rect
+          fill="transparent"
+          stroke="#000"
+          stroke-width="1"
+          width={this.width}
+          height={this.height}
+          x={x + this.correctX}
+          y={y + this.correctY}
+          mousedown={this.dragElement}
+        />
+      </g>
+    )
   },
   methods: {
     dragElement(e) {
@@ -88,4 +81,3 @@ export default {
     }
   }
 }
-</script>
