@@ -3,81 +3,84 @@ import Utils from '@/utils'
 
 const THROTTLE_DELAY_TIME = 30
 
-const sizeToPoints = (rect, correctX = 0, correctY = 0) => {
-  const xMin = rect.x + correctX
-  const xMid = rect.x + rect.width / 2 + correctX
-  const xMax = rect.x + rect.width + correctX
-  const yMin = rect.y + correctY
-  const yMid = rect.y + rect.height / 2 + correctY
-  const yMax = rect.y + rect.height + correctY
-
-  return [
-    [xMin, xMid, xMax],
-    [yMin, yMid, yMax]
-  ]
-}
-
-export default {
-  name: 'rectangle',
-  props: ['id', 'points', 'getViewportRef', 'correctX', 'correctY'],
+const ResizeHandler = {
+  name: 'resize-handler',
+  props: {
+    id: String,               // 编号
+    size: Object,             // 定位、宽高
+    corrected: Object,        // 修正值
+    getViewportRef: Function, // 获取svg dom引用的方法
+    scaling: Number,          // 缩放比值，用于控制手柄图形的大小
+    selected: Boolean         // 选中态
+  },
   data() {
-    return Common.pointsToSize(this.points)
+    return {
+      points: Common.sizeToPoints(this.size),
+      currentSize: this.size,
+      staticValue: {
+        negativeThirty: Common.absoluteZoom(-30, scaling),
+        four: Common.absoluteZoom(4, scaling)
+      }
+    }
   },
   watch: {
-    points(val) {
-      Object.assign(this, Common.pointsToSize(val))
+    size: {
+      handler(size, oldVal) {
+        this.points = Common.sizeToPoints(size)
+        this.currentSize = size
+      },
+      deep: true
+    },
+    scaling(scaling) {
+      this.staticValue.negativeThirty = Common.absoluteZoom(-30, scaling)
+      this.staticValue.four = Common.absoluteZoom(4, scaling)
     }
   },
   render(h) {
-    const viewBox = `0 0 ${width} ${height}`
+    const current = {
+      width: this.currentSize.width + this.corrected.width,
+      height: this.currentSize.height + this.corrected.height,
+      x: this.currentSize.x + this.corrected.x,
+      y: this.currentSize.y + this.corrected.y,
+      rotate: this.currentSize.rotate
+    }
+    const viewBox = `0 0 ${current.width} ${current.height}`
+
     return (
       <g>
-        <svg viewBox={viewBox}></svg>
         <rect
           fill="transparent"
           stroke="#000"
           stroke-width="1"
-          width={this.width}
-          height={this.height}
-          x={x + this.correctX}
-          y={y + this.correctY}
-          mousedown={this.dragElement}
+          width={current.width}
+          height={current.height}
+          x={current.x}
+          y={current.y}
         />
+        <svg
+          viewBox={viewBox}
+          width={current.width}
+          height={current.height}
+          x={current.x}
+          y={current.y}
+          mousedown={this.dragElement}
+        >
+          <circle class="cursor-rotate"      onMousedown={this.dragRotateHandle}       cx="50%" cy={this.staticValue.negativeThirty} r={this.staticValue.four} fill="#16ea00" />
+          <circle style="cursor:nwse-resize" onMousedown={this.dragTopLeftHandle}      title="top-left"      cx="0"    r={this.staticValue.four} cy="0"    />
+          <circle style="cursor:ns-resize"   onMousedown={this.dragTopMiddleHandle}    title="top-middle"    cx="50%"  r={this.staticValue.four} cy="0"    />
+          <circle style="cursor:nesw-resize" onMousedown={this.dragTopRightHandle}     title="top-right"     cx="100%" r={this.staticValue.four} cy="0"    />
+          <circle style="cursor:nesw-resize" onMousedown={this.dragBottomLeftHandle}   title="bottom-left"   cx="0"    r={this.staticValue.four} cy="100%" />
+          <circle style="cursor:ns-resize"   onMousedown={this.dragBottomMiddleHandle} title="bottom-middle" cx="50%"  r={this.staticValue.four} cy="100%" />
+          <circle style="cursor:nwse-resize" onMousedown={this.dragBottomRightHandle}  title="bottom-right"  cx="100%" r={this.staticValue.four} cy="100%" />
+          <circle style="cursor:ew-resize"   onMousedown={this.dragMiddleLeftHandle}   title="middle-left"   cx="0%"   r={this.staticValue.four} cy="50%"  />
+          <circle style="cursor:ew-resize"   onMousedown={this.dragMiddleRightHandle}  title="middle-right"  cx="100%" r={this.staticValue.four} cy="50%"  />
+        </svg>
       </g>
     )
   },
   methods: {
-    dragElement(e) {
-      let draged = false
-      const viewportRef = this.getViewportRef()
-      const mouseDownPosition = Common.getPositionInSvg(viewportRef, e)
-      const originPosition = {
-        x: this.x,
-        y: this.y
-      }
-
-      const dragMoveHandler = e => {
-        draged = true
-        const currentPosition = Common.getPositionInSvg(viewportRef, e)
-
-        Object.assign(this, {
-          x: originPosition.x + currentPosition.x - mouseDownPosition.x,
-          y: originPosition.y + currentPosition.y - mouseDownPosition.y,
-        })
-
-        this.$emit('draging', this.id, Common.sizeToPoints(this))
-      }
-
-      const mousemoveHandler = Utils.throttle(dragMoveHandler, THROTTLE_DELAY_TIME, true)
-
-      const mouseupHandler = ev => {
-        draged && this.$emit('update:points', Common.sizeToPoints(this, this.correctX, this.correctY))
-        window.removeEventListener('mousemove', mousemoveHandler)
-        window.removeEventListener('mouseup', mouseupHandler)
-      }
-
-      window.addEventListener('mousemove', mousemoveHandler)
-      window.addEventListener('mouseup', mouseupHandler)
-    }
+    ...handleMethods
   }
 }
+
+export default ResizeHandler
