@@ -1,7 +1,6 @@
 import SvgCanvas from './components/svg-canvas'
 
 export default {
-  render(h) {
-    return <SvgCanvas />
-  }
+  name: 'app',
+  render: h => h(SvgCanvas)
 }
