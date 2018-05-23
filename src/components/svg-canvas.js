@@ -12,6 +12,14 @@ const RectList = [
   {x: 208, y: 402, width: 231, height: 503, rotate: 0}
 ]
 
+const canvasVirtualShape = {
+  x: 1,
+  y: 1,
+  width: 998,
+  height: 998,
+  rotate: 0
+}
+
 // 重置参考物的线框尺寸
 const resetReferenceShape = () => [
   {x: 0, y: 0, width: 0, height: 0},
@@ -189,7 +197,7 @@ export default {
       }
 
       if (handler === 'move') {
-        this.shapeList.forEach(shape => {
+        [canvasVirtualShape, ...this.shapeList].forEach(shape => {
           if (shape.id === shapeId || (shape.rotate > 0)) {
             return
           }
@@ -227,7 +235,7 @@ export default {
           pointYDiff.forEach(getClosestY)
         })
       } else if (handler !== 'rotate') {
-        this.shapeList.forEach(shape => {
+        [canvasVirtualShape, ...this.shapeList].forEach(shape => {
           if (shape.id === shapeId || (shape.rotate > 0)) {
             return
           }
