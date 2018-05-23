@@ -4,6 +4,21 @@ import Utils from '@/utils'
 const THROTTLE_DELAY_TIME = 30
 const MINIMUM_SIZE = 4
 
+const resetSize = () => ({
+  x: 0,
+  y: 0,
+  width: 0,
+  height: 0,
+  rotate: 0
+})
+
+/**
+ * 获取旋转后的手柄坐标
+ * @param  {Object} rect     形状的宽高坐标
+ * @param  {Object} center   旋转中心的坐标
+ * @param  {String} position 手柄名称
+ * @return {Object}          旋转后的手柄坐标
+ */
 const getPoint = (rect, center, position) => {
   let point
 
@@ -65,25 +80,67 @@ const getPoint = (rect, center, position) => {
   }
 }
 
+/**
+ * 获取两点之间连线后的中点坐标
+ * @param  {Object} p1 点1的坐标
+ * @param  {Object} p2 点2的坐标
+ * @return {Object}    中点坐标
+ */
 const getCenterPoint = (p1, p2) => ({
   x: p1.x + ((p2.x - p1.x) / 2),
   y: p1.y + ((p2.y - p1.y) / 2)
 })
 
-const getKeyVariable = function(position) {
+/**
+ * 检测 p0 是否在 p1 与 p2 建立的矩形内
+ * @param  {Object}  p0 被检测的坐标
+ * @param  {Object}  p1 点1坐标
+ * @param  {Object}  p2 点2坐标
+ * @return {Boolean}    检测结果
+ */
+const pointInRect = (p0, p1, p2) => {
+  if (p1.x > p2.x) {
+    if (p0.x < p2.x) {
+      return false
+    }
+  } else {
+    if (p0.x > p2.x) {
+      return false
+    }
+  }
+
+  if (p1.y > p2.y) {
+    if (p0.y < p2.y) {
+      return false
+    }
+  } else {
+    if (p0.y > p2.y) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/**
+ * 获取关键变量（计算尺寸调整逻辑用）
+ * @param  {String} handler 手柄名称
+ * @return {Object}         关键变量集合
+ */
+const getKeyVariable = function(handler) {
   const viewportRef = this.getViewportRef()
   const rect = {
-    x: this.currentSize.x,
-    y: this.currentSize.y,
-    width: this.currentSize.width,
-    height: this.currentSize.height,
-    rotate: this.currentSize.rotate
+    x: this.current.x,
+    y: this.current.y,
+    width: this.current.width,
+    height: this.current.height,
+    rotate: this.current.rotate
   }
   const center = {
     x: rect.x + (rect.width / 2),
     y: rect.y + (rect.height / 2)
   }
-  const handlePoint = getPoint(rect, center, position)
+  const handlePoint = getPoint(rect, center, handler)
   const sPoint = {
     x: center.x + Math.abs(handlePoint.x - center.x) * (handlePoint.x < center.x ? 1 : -1),
     y: center.y + Math.abs(handlePoint.y - center.y) * (handlePoint.y < center.y ? 1 : -1)
@@ -114,12 +171,12 @@ const handleMethods = {
       draged = true
       const currentPosition = Common.getPositionInSvg(viewportRef, e)
 
-      Object.assign(this.currentSize, {
+      Object.assign(this.current, {
         x: originPosition.x + currentPosition.x - mouseDownPosition.x,
         y: originPosition.y + currentPosition.y - mouseDownPosition.y,
       })
 
-      this.$emit('changing', this.id, 'move', this.currentSize)
+      this.$emit('changing', this.id, 'move', this.current)
     }
 
     const mousemoveHandler = Utils.throttle(dragMoveHandler, THROTTLE_DELAY_TIME, true)
@@ -180,7 +237,6 @@ const handleMethods = {
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      draged && EventEmitter.$emit('change-element-geometric-properties', this.current)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
     }
@@ -195,9 +251,9 @@ const handleMethods = {
 
     const mousemoveHandler = Utils.throttle(e => {
       draged = true
+
       let currentPosition = Common.getPositionInSvg(viewportRef, e)
       let newCenterPoint = getCenterPoint(currentPosition, sPoint)
-
       let newTopLeftPoint = Common.getRotatedPoint(currentPosition, newCenterPoint, -rect.rotate)
       let newBottomRightPoint = Common.getRotatedPoint(sPoint, newCenterPoint, -rect.rotate)
 
@@ -226,18 +282,17 @@ const handleMethods = {
         return
       }
 
-      Object.assign(this.currentSize, {
+      Object.assign(this.current, {
         x: newTopLeftPoint.x,
         y: newTopLeftPoint.y,
         height: newHeight,
         width: newWidth
       })
 
-      this.$emit('changing', this.id, 'top-left', this.currentSize)
+      this.$emit('changing', this.id, 'top-left', this.current, newTopLeftPoint)
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      // draged && EventEmitter.$emit('change-element-geometric-properties', this.currentSize)
       draged && this.$emit('changed', this.id, this.correctedSize)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
@@ -271,7 +326,7 @@ const handleMethods = {
         return
       }
 
-      if (isInvalidCenterPoint(handlePoint, newCenter, sPoint)) {
+      if (!pointInRect(newCenter, handlePoint, sPoint)) {
         return
       }
 
@@ -280,10 +335,12 @@ const handleMethods = {
         y: newCenter.y - (newHeight / 2),
         x: newCenter.x - (rect.width / 2)
       })
+
+      this.$emit('changing', this.id, 'top-middle', this.current, rotatedTopMiddlePoint, currentPosition)
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      draged && EventEmitter.$emit('change-element-geometric-properties', this.current)
+      draged && this.$emit('changed', this.id, this.correctedSize)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
     }
@@ -335,10 +392,12 @@ const handleMethods = {
         height: newHeight,
         width: newWidth
       })
+
+      this.$emit('changing', this.id, 'top-right', this.current, newTopRightPoint, currentPosition)
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      draged && EventEmitter.$emit('change-element-geometric-properties', this.current)
+      draged && this.$emit('changed', this.id, this.correctedSize)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
     }
@@ -390,10 +449,12 @@ const handleMethods = {
         height: newHeight,
         width: newWidth
       })
+
+      this.$emit('changing', this.id, 'bottom-left', this.current, newBottomLeftPoint)
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      draged && EventEmitter.$emit('change-element-geometric-properties', this.current)
+      draged && this.$emit('changed', this.id, this.correctedSize)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
     }
@@ -426,7 +487,7 @@ const handleMethods = {
         return
       }
 
-      if (isInvalidCenterPoint(handlePoint, newCenter, sPoint)) {
+      if (!pointInRect(newCenter, handlePoint, sPoint)) {
         return
       }
 
@@ -435,10 +496,12 @@ const handleMethods = {
         y: newCenter.y - (newHeight / 2),
         x: newCenter.x - (rect.width / 2)
       })
+
+      this.$emit('changing', this.id, 'bottom-middle', this.current, rotatedBottomMiddlePoint, currentPosition)
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      draged && EventEmitter.$emit('change-element-geometric-properties', this.current)
+      draged && this.$emit('changed', this.id, this.correctedSize)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
     }
@@ -490,10 +553,12 @@ const handleMethods = {
         height: newHeight,
         width: newWidth
       })
+
+      this.$emit('changing', this.id, 'bottom-right', this.current, newBottomRightPoint, currentPosition)
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      draged && EventEmitter.$emit('change-element-geometric-properties', this.current)
+      draged && this.$emit('changed', this.id, this.correctedSize)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
     }
@@ -526,7 +591,7 @@ const handleMethods = {
         return
       }
 
-      if (isInvalidCenterPoint(handlePoint, newCenter, sPoint)) {
+      if (!pointInRect(newCenter, handlePoint, sPoint)) {
         return
       }
 
@@ -535,10 +600,12 @@ const handleMethods = {
         y: newCenter.y - (rect.height / 2),
         x: newCenter.x - (newWidth / 2)
       })
+
+      this.$emit('changing', this.id, 'middle-left', this.current, rotatedLeftMiddlePoint, currentPosition)
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      draged && EventEmitter.$emit('change-element-geometric-properties', this.current)
+      draged && this.$emit('changed', this.id, this.correctedSize)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
     }
@@ -571,7 +638,7 @@ const handleMethods = {
         return
       }
 
-      if (isInvalidCenterPoint(handlePoint, newCenter, sPoint)) {
+      if (!pointInRect(newCenter, handlePoint, sPoint)) {
         return
       }
 
@@ -580,10 +647,12 @@ const handleMethods = {
         y: newCenter.y - (rect.height / 2),
         x: newCenter.x - (newWidth / 2)
       })
+
+      this.$emit('changing', this.id, 'middle-right', this.current, rotatedRightMiddlePoint, currentPosition)
     }, THROTTLE_DELAY_TIME, true)
 
     const mouseupHandler = ev => {
-      draged && EventEmitter.$emit('change-element-geometric-properties', this.current)
+      draged && this.$emit('changed', this.id, this.correctedSize)
       window.removeEventListener('mousemove', mousemoveHandler)
       window.removeEventListener('mouseup', mouseupHandler)
     }
@@ -599,23 +668,11 @@ const ResizeHandler = {
     id: String,               // 编号
     size: {                   // 定位、宽高
       type: Object,
-      default: () => ({
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        rotate: 0
-      })
+      default: resetSize
     },
     corrected: {              // 修正值
       type: Object,
-      default: () => ({
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        rotate: 0
-      })
+      default: resetSize
     },
     getViewportRef: Function, // 获取svg dom引用的方法
     scaling: Number,          // 缩放比值，用于控制手柄图形的大小
@@ -623,10 +680,7 @@ const ResizeHandler = {
   },
   data() {
     return {
-      workspace: {
-        lockProportions: true
-      },
-      currentSize: {
+      current: {
         x: this.size.x,
         y: this.size.y,
         width: this.size.width,
@@ -642,19 +696,32 @@ const ResizeHandler = {
   },
   computed: {
     correctedSize() {
-      return {
-        x: this.currentSize.x + this.corrected.x,
-        y: this.currentSize.y + this.corrected.y,
-        width: this.currentSize.width + this.corrected.width,
-        height: this.currentSize.height + this.corrected.height,
-        rotate: this.currentSize.rotate
+      const correctedSize = {
+        x: this.current.x + this.corrected.x,
+        y: this.current.y + this.corrected.y,
+        width: this.current.width + this.corrected.width,
+        height: this.current.height + this.corrected.height,
+        rotate: this.current.rotate
       }
+      
+
+      if (correctedSize.width < MINIMUM_SIZE || (correctedSize.height < MINIMUM_SIZE)) {
+        return {
+          x: this.current.x,
+          y: this.current.y,
+          width: this.current.width,
+          height: this.current.height,
+          rotate: this.current.rotate
+        }
+      }
+
+      return correctedSize
     }
   },
   watch: {
     size: {
       handler(size, oldVal) {
-        this.currentSize = size
+        this.current = size
       },
       deep: true
     },
@@ -668,7 +735,7 @@ const ResizeHandler = {
     const viewBox = `0 0 ${current.width} ${current.height}`
 
     return (
-      <g>
+      <g transform={`rotate(${this.current.rotate},${this.current.x + this.current.width / 2},${this.current.y + this.current.height / 2})`}>
         <rect
           fill="none"
           stroke="#000"
