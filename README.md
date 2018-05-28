@@ -2,6 +2,8 @@
 
 [在线预览DEMO](https://shenhudong.github.io/snapping-demo/)
 
+[文档](https://github.com/shenhudong/snapping-demo/wiki)
+
 ## 支持的功能
 
 - 调整图形尺寸，旋转角度
