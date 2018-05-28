@@ -61,10 +61,6 @@ export default {
         <rect width="100%" height="100%" fill="none" stroke="#000" x="0" y="0" />
         {
           this.shapeList.map((shape, i) => {
-            const correctedProps = shape.id === this.dragingShapeId ? {
-              corrected: this.corrected
-            } : {}
-
             if (shape.id === this.dragingShapeId) {
               return (
                 <ResizeHandler
@@ -358,6 +354,11 @@ export default {
       }
     },
 
+    /**
+     * 形状变化完的回调
+     * @param  {String} shapeId 形状编号
+     * @param  {Object} size    形状几何属性
+     */
     handleChangedShape(shapeId, size) {
       this.shapeList.some(shape => {
         if (shape.id === shapeId) {
